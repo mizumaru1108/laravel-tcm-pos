@@ -30,8 +30,8 @@ class AuthController extends Controller
                 ]
             ], 400);
         } else if ($user) {
-            $token = $user->createToken('token')->plainTextToken;
             if (Hash::check(request()->password, $user->password)) {
+                $token = $user->createToken('token')->plainTextToken;
                 return response()->json([
                     'message' => 'Success',
                     'user' => $user,

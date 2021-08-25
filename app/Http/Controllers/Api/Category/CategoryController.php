@@ -15,7 +15,15 @@ class CategoryController extends Controller
         if ($request->filter) {
             $findAllCategory = $findAllCategory->where('name', 'like', "%$request->filter%");
         }
-        $findAllCategory = $findAllCategory->get();
+        if ($request->has('per_page')) {
+            $perPage = 5;
+            if ($request->per_page) {
+                $perPage = $request->per_page;
+                $findAllCategory = $findAllCategory->paginate($perPage);
+            }
+        } else {
+            $findAllCategory = $findAllCategory->get();
+        }
         return CategoryResource::collection($findAllCategory);
     }
 
