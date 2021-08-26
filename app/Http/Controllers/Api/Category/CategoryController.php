@@ -35,9 +35,12 @@ class CategoryController extends Controller
 
     public function store()
     {
-        request()->validate([
+        $validator = validator(request()->all(), [
             'name' => 'required|unique:categories,name',
         ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Gagal!', 'errors' => $validator->errors()], 400);
+        }
         $res = Category::create(
             request()->all()
         );
@@ -46,9 +49,12 @@ class CategoryController extends Controller
 
     public function update($id)
     {
-        request()->validate([
+        $validator = validator(request()->all(), [
             'name' => "required|unique:categories,name,$id",
         ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Gagal Anjg!', 'errors' => $validator->errors()], 400);
+        }
         $findCategory = Category::findOrFail($id);
         $findCategory->update(
             request()->all()
