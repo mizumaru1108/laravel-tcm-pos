@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 
 class ProductController extends Controller
@@ -41,6 +42,7 @@ class ProductController extends Controller
             'name' => 'required|unique:products,name',
             'price' => 'required',
             'quantity' => 'required',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Task Failed', 'errors' => $validator->errors()], 400);
@@ -50,11 +52,16 @@ class ProductController extends Controller
             'price' => request()->price,
             'category_id' => request()->category_id,
             'quantity' => request()->quantity,
+            'detail' => request()->detail,
         ];
+        if (request('image')) {
+            $payloadProduct['image'] = Storage::disk('s3')->put('product', request()->file('image'), 'public');
+        }
         $res = Product::create(
             $payloadProduct
         );
         return response()->json($res);
+        // return response()->json(["Message" => request('image')]);
     }
 
 
@@ -68,9 +75,10 @@ class ProductController extends Controller
     public function update($id)
     {
         $validator = validator(request()->all(), [
-            'name' => "required|unique:products,name$id",
+            'name' => "required|unique:products,name,$id",
             'price' => 'required',
             'quantity' => 'required',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
 
         ]);
         if ($validator->fails()) {
@@ -83,7 +91,12 @@ class ProductController extends Controller
             'category_id' => request()->category_id,
             'quantity' => request()->quantity,
         ];
-
+        if (request()->file('image')) {
+            if (Storage::disk('s3')->exists($findProduct->image)) {
+                Storage::disk('s3')->delete($findProduct->image);
+            }
+            $payloadProduct['image'] = Storage::disk('s3')->put('product', request()->file('image'), 'public');
+        }
         $findProduct->update(
             $payloadProduct
         );
@@ -94,6 +107,11 @@ class ProductController extends Controller
     {
         $findProduct = Product::findOrFail($id);
         $deleteProduct = $findProduct->delete();
+
+        $findProduct = Product::findOrFail($id);
+        if (Storage::disk('s3')->exists($findProduct->image)) {
+            Storage::disk('s3')->delete($findProduct->image);
+        }
         if (!$deleteProduct) {
             return response()->json(['message' => "Delete Product Failed"], 500);
         }
