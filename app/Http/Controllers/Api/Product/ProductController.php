@@ -75,6 +75,10 @@ class ProductController extends Controller
     public function update($id)
     {
         $validator = validator(request()->all(), [
+            // 'name' => "required|unique:products,name,$id",
+            // 'price' => 'required',
+            // 'quantity' => 'required',
+            // 'image' => 'nullable|file|mimes:jpeg,png,jpg|max:2048',
             'name' => "required|unique:products,name,$id",
             'price' => 'required',
             'quantity' => 'required',
@@ -90,6 +94,7 @@ class ProductController extends Controller
             'price' => request()->price,
             'category_id' => request()->category_id,
             'quantity' => request()->quantity,
+            'detail' => request()->detail,
         ];
         if (request()->file('image')) {
             if (Storage::disk('s3')->exists($findProduct->image)) {

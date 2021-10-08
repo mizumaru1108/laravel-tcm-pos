@@ -13,11 +13,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::resource('user', UserController::class);
 
+    Route::resource('product', ProductController::class);
+    Route::post('product/{id}', [ProductController::class, 'update'])->name('products.update');
+
     Route::resource('category', CategoryController::class);
     Route::get('categories', [CategoryController::class, 'categorylist']);
 
-    Route::resource('product', ProductController::class);
-    Route::post('product/{id}', [ProductController::class, 'update'])->name("post.update");
 
     Route::resource('order', OrderController::class);
     Route::get('getcount', [OrderController::class, 'getUnfinishedTransactionCount']);

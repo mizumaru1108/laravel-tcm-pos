@@ -53,7 +53,7 @@ class CategoryController extends Controller
             'name' => "required|unique:categories,name,$id",
         ]);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Gagal Anjg!', 'errors' => $validator->errors()], 400);
+            return response()->json(['message' => 'Gagal!', 'errors' => $validator->errors()], 400);
         }
         $findCategory = Category::findOrFail($id);
         $findCategory->update(
