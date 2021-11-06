@@ -25,7 +25,7 @@ class ReportController extends Controller
     {
         $currentDate = Carbon::now();
         $currentDateString = $currentDate->toDateString();
-        $getDaily = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date, status")
+        $getDaily = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date")
             ->where('status', 2)
             ->groupBy('order_date')
             ->having('order_date', $currentDateString)
@@ -74,7 +74,7 @@ class ReportController extends Controller
 
     public function dashboardRecentTransaction()
     {
-        $getRecent = Order::selectRaw('sum(total_price) as order_total,employee_id, order_code, created_at')
+        $getRecent = Order::selectRaw('sum(total_price) as order_total, employee_id, order_code, created_at')
             ->with('employee')
             ->where('status', 2)
             ->groupBy('created_at')
@@ -130,7 +130,7 @@ class ReportController extends Controller
     public function allTransactionReport(Request $request)
     {
         $getAll = Order::selectRaw("sum(total_price) as order_total, order_number, employee_id, order_code, created_at, id, discount_percentage, discount_value, cash, `change`, total_price")
-            ->with(['employee', 'details.menu'])
+            ->with(['employee', 'details.product'])
             ->where('status', 2)
             ->groupBy('created_at')
             ->orderBy('created_at', 'desc');
@@ -161,7 +161,7 @@ class ReportController extends Controller
     public function exportReport(Request $request)
     {
         $getAll = Order::selectRaw("sum(total_price) as order_total, order_number, employee_id, order_code, created_at, id, discount_percentage, discount_value, cash, `change`, total_price")
-            ->with(['employee', 'details.menu'])
+            ->with(['employee', 'details.product'])
             ->where('status', 2)
             ->groupBy('created_at')
             ->orderBy('created_at', 'desc');
