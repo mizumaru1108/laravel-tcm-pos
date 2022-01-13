@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\User\UserController;
 use App\Http\Controllers\Api\Product\ProductController;
 use App\Http\Controllers\Api\Order\OrderController;
 use App\Http\Controllers\Api\Report\ReportController;
+use App\Http\Controllers\Api\Permission\PermissionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -13,11 +14,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('profile', [AuthController::class, 'profile'])->name('auth.profile');
 
     Route::resource('user', UserController::class);
+    Route::post('user/{id}', [UserController::class, 'update'])->name("user.updates");
 
     Route::get('roles', [PermissionController::class, 'rolelist'])->name("permission.rolelist");
 
     Route::resource('product', ProductController::class);
-    Route::post('product/{id}', [ProductController::class, 'update'])->name('products.update');
+    Route::post('product/{id}', [ProductController::class, 'update'])->name('products.updates');
 
     Route::resource('category', CategoryController::class);
     Route::get('categories', [CategoryController::class, 'categorylist']);
