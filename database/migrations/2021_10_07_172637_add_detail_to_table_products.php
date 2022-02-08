@@ -26,7 +26,7 @@ class AddDetailToTableProducts extends Migration
     public function down()
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->string('detail')->nullable()->after('quantity');
+            $table->dropColumn('detail');
         });
     }
 }
