@@ -20,7 +20,7 @@ class CreateProductsTable extends Migration
             $table->string('name', 255);
             $table->integer('price');
             $table->integer('quantity');
-            $table->string('gambar', 255);
+            $table->string('gambar', 255)->nullable();
             $table->timestamps();
         });
     }
