@@ -23,52 +23,78 @@ class ReportController extends Controller
 {
     public function dashboardDailyReport()
     {
-        $currentDate = Carbon::now();
-        $currentDateString = $currentDate->toDateString();
-        $getDaily = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date")
+        $currentDate = Carbon::now()->toDateString();
+    
+        $getDaily = Order::selectRaw("
+                SUM(total_price) AS order_total,
+                COUNT(id) AS total_transaction,
+                TO_CHAR(created_at, 'YYYY-MM-DD') AS order_date
+            ")
             ->where('status', 2)
-            ->groupBy('order_date')
-            ->having('order_date', $currentDateString)
+            ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM-DD')")
+            ->havingRaw("TO_CHAR(created_at, 'YYYY-MM-DD') = ?", [$currentDate])
             ->first();
+    
         if (!$getDaily) {
-            return response()->json(['data' => [
-                'order_total' => 0,
-                'total_transaction' => 0,
-                'order_date' => $currentDateString
-            ]]);
+            return response()->json([
+                'data' => [
+                    'order_total' => 0,
+                    'total_transaction' => 0,
+                    'order_date' => $currentDate,
+                ]
+            ]);
         }
+    
         return new DashboardDailyReportResource($getDaily);
         // return response()->json(['data' => $getDaily]);
     }
+    
 
     public function dashboardWeeklyReport()
     {
         $currentDate = Carbon::now()->addDay();
         $currentDateString = $currentDate->toDateString();
         $lastWeek = $currentDate->subWeek()->toDateString();
-        $getWeekly = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date")
+    
+        $getWeekly = Order::selectRaw("
+                SUM(total_price) AS order_total,
+                COUNT(id) AS total_transaction,
+                TO_CHAR(created_at, 'YYYY-MM-DD') AS order_date
+            ")
             ->where('status', 2)
             ->groupBy('order_date')
-            ->having('order_date', '>=', $lastWeek)
-            ->having('order_date', '<=', $currentDateString)
+            ->havingRaw("TO_CHAR(created_at, 'YYYY-MM-DD') >= ?", [$lastWeek])
+            ->havingRaw("TO_CHAR(created_at, 'YYYY-MM-DD') <= ?", [$currentDateString])
             ->get();
+    
         return DashboardWeeklyReportResource::collection($getWeekly);
     }
-
+    
     public function dasboardYearlyReport()
     {
-        $getYearly = Order::selectRaw("sum(total_price) as order_total, MIN(created_at) as first_trans , MAX(created_at) as last_trans,   YEAR(created_at) as tahun")
+        $currentYear = Carbon::now()->format('Y');
+    
+        $getYearly = Order::selectRaw("
+                SUM(total_price) AS order_total,
+                MIN(created_at) AS first_trans,
+                MAX(created_at) AS last_trans,
+                EXTRACT(YEAR FROM created_at) AS tahun
+            ")
             ->where('status', 2)
-            ->groupBy('tahun')
-            ->having('tahun', date('Y'))
+            ->groupByRaw("EXTRACT(YEAR FROM created_at)")
+            ->havingRaw("EXTRACT(YEAR FROM created_at) = ?", [$currentYear])
             ->first();
+    
         if (!$getYearly) {
-            return response()->json(['data' => [
-                'order_total' => 0,
-                'bulan' => 'no transaction yet',
-                'tahun' => Carbon::now()->format('Y'),
-            ]]);
+            return response()->json([
+                'data' => [
+                    'order_total' => 0,
+                    'bulan' => 'no transaction yet',
+                    'tahun' => $currentYear,
+                ]
+            ]);
         }
+    
         return new DashboardYearlyReportResource($getYearly);
     }
 
@@ -77,7 +103,7 @@ class ReportController extends Controller
         $getRecent = Order::selectRaw('sum(total_price) as order_total, employee_id, order_code, created_at')
             ->with('employee')
             ->where('status', 2)
-            ->groupBy('created_at')
+            ->groupBy('employee_id', 'order_code', 'created_at')
             ->limit(6)
             ->orderBy('created_at', 'desc')
             ->get();

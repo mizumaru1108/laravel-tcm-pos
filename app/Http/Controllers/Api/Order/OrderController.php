@@ -148,6 +148,14 @@ class OrderController extends Controller
             $totalPrice = 0;
             if ($request->has('checkout')) {
                 $getOrder->status = 2;
+                foreach ($getOrder->details as $data) {
+                    $findProduct = Product::find($data->product_id);
+                    $findProduct->quantity -= $data->qty;
+                    if($findProduct->quantity < 0){
+                        return response()->json(['message' => 'Quantity Not Available'], 404);
+                    }
+                    $findProduct->save();
+                }
             }
             $getDetailsProductIds = collect($request->details)->map(function ($data) {
                 return $data['product_id'];
@@ -183,6 +191,7 @@ class OrderController extends Controller
             DB::rollBack();
         }
     }
+
     public function getUnfinishedTransactionCount()
     {
         $getAllOrder = Order::where('status', '=', 1)->get()->count();
