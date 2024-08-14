@@ -119,50 +119,98 @@ class ReportController extends Controller
         return DailyReportResource::collection($getDaily);
     }
 
+    // public function weeklyReport()
+    // {
+    //     $currentDate = Carbon::now()->addDay();
+    //     $currentDateString = $currentDate->toDateString();
+    //     $lastWeek = $currentDate->subWeek()->toDateString();
+    //     $getWeekly = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, TO_CHAR(created_at, 'YYYY-MM-DD') as order_date")
+    //         ->where('status', 2)
+    //         ->groupBy('order_date')
+    //         ->having('order_date', '>=', $lastWeek)
+    //         ->having('order_date', '<=', $currentDateString)
+    //         ->get();
+    //     return WeeklyReportResource::collection($getWeekly);
+    // }
     public function weeklyReport()
     {
         $currentDate = Carbon::now()->addDay();
         $currentDateString = $currentDate->toDateString();
         $lastWeek = $currentDate->subWeek()->toDateString();
-        $getWeekly = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date")
+    
+        $getWeekly = Order::selectRaw("sum(total_price) as order_total, count(id) as total_transaction, TO_CHAR(created_at, 'YYYY-MM-DD') as order_date")
             ->where('status', 2)
-            ->groupBy('order_date')
-            ->having('order_date', '>=', $lastWeek)
-            ->having('order_date', '<=', $currentDateString)
+            ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM-DD')")
+            ->havingRaw('TO_CHAR(created_at, \'YYYY-MM-DD\') >= ?', [$lastWeek])
+            ->havingRaw('TO_CHAR(created_at, \'YYYY-MM-DD\') <= ?', [$currentDateString])
             ->get();
+    
         return WeeklyReportResource::collection($getWeekly);
     }
+    
+    // public function monthlyReport()
+    // {
+    //     $getMonthly = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, TO_CHAR(created_at, 'YYYY-MM-DD') as order_date, MONTH(created_at) as bulan")
+    //         ->where('status', 2)
+    //         ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM-DD')")
+    //         ->having('bulan', date('m'))
+    //         ->get();
+    //     return MonthlyReportResource::collection($getMonthly);
+    // }
 
     public function monthlyReport()
     {
-        $getMonthly = Order::selectRaw("sum(total_price) as order_total,count(id) as total_transaction, (DATE_FORMAT(created_at,'%Y-%m-%d')) as order_date, MONTH(created_at) as bulan")
+        $getMonthly = Order::selectRaw("sum(total_price) as order_total, count(id) as total_transaction, TO_CHAR(created_at, 'YYYY-MM-DD') as order_date, EXTRACT(MONTH FROM created_at) as bulan")
             ->where('status', 2)
-            ->groupBy('order_date')
-            ->having('bulan', date('m'))
+            ->groupByRaw("TO_CHAR(created_at, 'YYYY-MM-DD'), EXTRACT(MONTH FROM created_at)")
+            ->havingRaw('EXTRACT(MONTH FROM created_at) = ?', [date('m')])
             ->get();
+
         return MonthlyReportResource::collection($getMonthly);
     }
 
+
+    // public function yearlyReport()
+    // {
+    //     $getYearly = Order::selectRaw("sum(total_price) as order_total, MIN(created_at) as first_trans , MAX(created_at) as last_trans,MONTH(created_at) as bulan, YEAR(created_at) as tahun, count(id) as total_transaction")
+    //         ->where('status', 2)
+    //         ->groupBy('bulan')
+    //         ->having('tahun', date('Y'))
+    //         ->get();
+    //     return YearlyReportResource::collection($getYearly);
+    // }
+
     public function yearlyReport()
     {
-        $getYearly = Order::selectRaw("sum(total_price) as order_total, MIN(created_at) as first_trans , MAX(created_at) as last_trans,MONTH(created_at) as bulan, YEAR(created_at) as tahun, count(id) as total_transaction")
+        $getYearly = Order::selectRaw("
+                sum(total_price) as order_total, 
+                MIN(created_at) as first_trans, 
+                MAX(created_at) as last_trans,
+                EXTRACT(MONTH FROM created_at) as bulan, 
+                EXTRACT(YEAR FROM created_at) as tahun, 
+                count(id) as total_transaction
+            ")
             ->where('status', 2)
-            ->groupBy('bulan')
-            ->having('tahun', date('Y'))
+            ->groupByRaw("EXTRACT(MONTH FROM created_at), EXTRACT(YEAR FROM created_at)")
+            ->havingRaw('EXTRACT(YEAR FROM created_at) = ?', [date('Y')])
             ->get();
+
         return YearlyReportResource::collection($getYearly);
     }
 
+
     public function allTransactionReport(Request $request)
     {
-        $getAll = Order::selectRaw("sum(total_price) as order_total, order_number, employee_id, order_code, created_at, id, discount_percentage, discount_value, cash, `change`, total_price")
+        $getAll = Order::selectRaw("sum(total_price) as order_total, order_number, employee_id, order_code, created_at, id, discount_percentage, discount_value, cash, change, total_price")
             ->with(['employee', 'details.product'])
             ->where('status', 2)
-            ->groupBy('created_at')
+            ->groupBy('created_at', 'order_number', 'employee_id', 'order_code', 'id', 'discount_percentage', 'discount_value', 'cash', 'change', 'total_price')
             ->orderBy('created_at', 'desc');
+
         if ($request->filter) {
             $getAll = $getAll->where('order_code', 'like', "%$request->filter%")->orWhere('total_price', 'like', "%$request->filter%");
         }
+
         if ($request->fromdate) {
             $fromdate = $request->fromdate;
             if ($request->fromdate && $request->todate) {
@@ -172,6 +220,7 @@ class ReportController extends Controller
                 $getAll = $getAll->whereDate('created_at', '=', "$fromdate");
             }
         }
+
         if ($request->has('per_page')) {
             $perPage = 5;
             if ($request->per_page) {
@@ -181,8 +230,10 @@ class ReportController extends Controller
         } else {
             $getAll = $getAll->get();
         }
+
         return AllTransactionReportResource::collection($getAll);
     }
+
 
     public function exportReport(Request $request)
     {
